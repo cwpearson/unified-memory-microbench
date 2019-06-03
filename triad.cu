@@ -28,9 +28,9 @@ Results triad(size_t bytes, const T scalar, const size_t numIters) {
   const size_t n = bytes / sizeof(T);
   bytes = bytes / sizeof(T) * sizeof(T);
 
-  int *a = nullptr;
-  int *b = nullptr;
-  int *c = nullptr;
+  T *a = nullptr;
+  T *b = nullptr;
+  T *c = nullptr;
 
   CUDA_RUNTIME(cudaMallocManaged(&a, bytes));
   CUDA_RUNTIME(cudaMallocManaged(&b, bytes));
@@ -71,12 +71,71 @@ Results triad(size_t bytes, const T scalar, const size_t numIters) {
   return results;
 }
 
-int main(void) {
+template <typename T>
+Results triad_new(size_t bytes, const T scalar, const size_t numIters) {
 
-  size_t bytes = 2ul * 1024ul * 1024ul * 1024ul;
+  Results results;
+  results.unit = "b/s";
 
-  Results results = triad(bytes, 1, 3);
+  // number of elements and actual allocation size
+  const size_t n = bytes / sizeof(T);
+  bytes = bytes / sizeof(T) * sizeof(T);
 
+  T *a = nullptr;
+  T *b = nullptr;
+  T *c = nullptr;
+
+  a = (T*)malloc(bytes);
+  b = (T*)malloc(bytes);
+  c = (T*)malloc(bytes);
+
+  if (a == nullptr) {
+    return results;
+  }
+  if (b == nullptr) {
+    return results;
+  }
+  if (c == nullptr) {
+    return results;
+  }
+
+
+  cudaEvent_t start = nullptr;
+  cudaEvent_t stop = nullptr;
+  cudaStream_t stream = nullptr;
+
+  CUDA_RUNTIME(cudaStreamCreate(&stream));
+  CUDA_RUNTIME(cudaEventCreate(&start));
+  CUDA_RUNTIME(cudaEventCreate(&stop));
+
+  for (size_t iter = 0; iter < numIters; ++iter) {
+    CUDA_RUNTIME(cudaEventRecord(start, stream));
+    triad_kernel<<<150, 512, 0, stream>>>(a, b, c, scalar, n);
+    CUDA_RUNTIME(cudaEventRecord(stop, stream));
+
+    CUDA_RUNTIME(cudaStreamSynchronize(stream));
+    float elapsed;
+    CUDA_RUNTIME(cudaEventElapsedTime(&elapsed, start, stop));
+
+    // add time and metric
+    results.times.push_back(elapsed);
+    results.metrics.push_back(3ul*bytes / elapsed);
+  }
+
+  CUDA_RUNTIME(cudaStreamDestroy(stream));
+  CUDA_RUNTIME(cudaEventDestroy(start));
+  CUDA_RUNTIME(cudaEventDestroy(stop));
+
+  free(a);
+  a = nullptr;
+  free(b);
+  b = nullptr;
+  free(c);
+  c = nullptr;
+  return results;
+}
+
+void print(const std::string &name, const size_t bytes, const Results &results) {
   // print header
   printf("benchmark\tsize\tunit");
   for (size_t i = 0; i < results.times.size(); ++i) {
@@ -85,16 +144,28 @@ int main(void) {
   printf("\n");
 
   // print times
-  printf("triad\t%lu\t%s", bytes, "s");
+  printf("%s\t%lu\t%s", name.c_str(), bytes, "s");
   for (auto t : results.times) {
     printf("\t%f", t);
   }
   printf("\n");
 
   // print metrics
-  printf("triad\t%lu\t%s", bytes, results.unit.c_str());
+  printf("%s\t%lu\t%s", name.c_str(), bytes, results.unit.c_str());
   for (auto m : results.metrics) {
     printf("\t%f", m);
   }
   printf("\n");
+}
+
+int main(void) {
+
+  size_t bytes = 2ul * 1024ul * 1024ul * 1024ul;
+
+  Results results = triad<int>(bytes, 1, 3);
+  print("triad", bytes, results);
+
+  results = triad_new<int>(bytes, 1, 3);
+  print("triad_new", bytes, results);
+
 }
