@@ -2,6 +2,7 @@
 
 #include "check_cuda.cuh"
 #include "results.hpp"
+#include "allocator.cuh"
 
 
 
