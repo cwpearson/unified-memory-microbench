@@ -160,7 +160,6 @@ Results triad_footprint(size_t bytes, const T scalar, const size_t numIters) {
     // scale each kernel so that it only touches footprint memory
     const size_t footprintBytes = 4ul * 1024ul * 1024ul * 1024ul;
     const size_t footprintElems = footprintBytes / 3 /* number of arrays */ / sizeof(T);
-    // fprintf(stderr, "footprintElems %lu\n", footprintElems);
 
     CUDA_RUNTIME(cudaEventRecord(start, stream));
     for (size_t startIdx = 0; startIdx < n; startIdx += footprintElems) {
@@ -169,7 +168,6 @@ Results triad_footprint(size_t bytes, const T scalar, const size_t numIters) {
       T *aBegin = &a[startIdx];
       T *bBegin = &b[startIdx];
       T *cBegin = &c[startIdx];
-      // fprintf(stderr, "launch [%lu, %lu)\n", startIdx, stopIdx);
       triad_kernel<<<150, 512, 0, stream>>>(aBegin, bBegin, cBegin, scalar, kernelN);
     }
     
@@ -238,16 +236,14 @@ Results triad_footprint_system(size_t bytes, const T scalar, const size_t numIte
     // scale each kernel so that it only touches footprint memory
     const size_t footprintBytes = 4ul * 1024ul * 1024ul * 1024ul;
     const size_t footprintElems = footprintBytes / 3 /* number of arrays */ / sizeof(T);
-    fprintf(stderr, "footprintElems %lu\n", footprintElems);
 
     CUDA_RUNTIME(cudaEventRecord(start, stream));
-    for (size_t startIdx = 0; startIdx < (n + footprintElems - 1) / footprintElems; startIdx += footprintElems) {
+    for (size_t startIdx = 0; startIdx < n; startIdx += footprintElems) {
       size_t stopIdx = min(startIdx + footprintElems, n);
       size_t kernelN = stopIdx - startIdx;
       T *aBegin = &a[startIdx];
       T *bBegin = &b[startIdx];
       T *cBegin = &c[startIdx];
-      fprintf(stderr, "launch \n");
       triad_kernel<<<150, 512, 0, stream>>>(aBegin, bBegin, cBegin, scalar, kernelN);
     }
     
