@@ -59,10 +59,10 @@ Results triad(size_t bytes, const T scalar, const size_t numIters) {
   CUDA_RUNTIME(cudaEventDestroy(stop));
 
   CUDA_RUNTIME(cudaFree(a));
-  a = nullptr;
   CUDA_RUNTIME(cudaFree(b));
-  b = nullptr;
   CUDA_RUNTIME(cudaFree(c));
+  a = nullptr;
+  b = nullptr;
   c = nullptr;
   return results;
 }
@@ -127,6 +127,70 @@ Results triad_system(size_t bytes, const T scalar, const size_t numIters) {
   free(b);
   b = nullptr;
   free(c);
+  c = nullptr;
+  return results;
+}
+
+template <typename T>
+Results triad_footprint(size_t bytes, const T scalar, const size_t numIters) {
+
+  Results results;
+  results.unit = "b/s";
+
+  // number of elements and actual allocation size
+  const size_t n = bytes / sizeof(T);
+  bytes = bytes / sizeof(T) * sizeof(T);
+
+  T *a = nullptr;
+  T *b = nullptr;
+  T *c = nullptr;
+  CUDA_RUNTIME(cudaMallocManaged(&a, bytes));
+  CUDA_RUNTIME(cudaMallocManaged(&b, bytes));
+  CUDA_RUNTIME(cudaMallocManaged(&c, bytes));
+
+  cudaEvent_t start = nullptr;
+  cudaEvent_t stop = nullptr;
+  cudaStream_t stream = nullptr;
+
+  CUDA_RUNTIME(cudaStreamCreate(&stream));
+  CUDA_RUNTIME(cudaEventCreate(&start));
+  CUDA_RUNTIME(cudaEventCreate(&stop));
+
+  for (size_t iter = 0; iter < numIters; ++iter) {
+    CUDA_RUNTIME(cudaEventRecord(start, stream));
+
+    // scale each kernel so that it only touches footprint memory
+    const size_t footprint = 4ul * 1024ul * 1024ul * 1024ul;
+
+    for (size_t startIdx = 0; startIdx < (footprint + sizeof(T) - 1) / sizeof(T); startIdx += footprint) {
+      size_t stopIdx = min(startIdx + footprint, n);
+      size_t kernelN = stopIdx - startIdx;
+      T *aBegin = &a[startIdx];
+      T *bBegin = &b[startIdx];
+      T *cBegin = &c[startIdx];
+      triad_kernel<<<150, 512, 0, stream>>>(aBegin, bBegin, cBegin, scalar, kernelN);
+    }
+    
+    CUDA_RUNTIME(cudaEventRecord(stop, stream));
+
+    CUDA_RUNTIME(cudaStreamSynchronize(stream));
+    float elapsed;
+    CUDA_RUNTIME(cudaEventElapsedTime(&elapsed, start, stop));
+
+    // add time and metric
+    results.times.push_back(elapsed);
+    results.metrics.push_back(3ul*bytes / elapsed);
+  }
+
+  CUDA_RUNTIME(cudaStreamDestroy(stream));
+  CUDA_RUNTIME(cudaEventDestroy(start));
+  CUDA_RUNTIME(cudaEventDestroy(stop));
+
+  CUDA_RUNTIME(cudaFree(a));
+  CUDA_RUNTIME(cudaFree(b));
+  CUDA_RUNTIME(cudaFree(c));
+  a = nullptr;
+  b = nullptr;
   c = nullptr;
   return results;
 }
@@ -207,25 +271,26 @@ Results triad_footprint_system(size_t bytes, const T scalar, const size_t numIte
   return results;
 }
 
-void print(const std::string &name, const size_t bytes, const Results &results) {
-  // print header
+void print_header(size_t numIters) {
   printf("benchmark\tsize\tunit");
-  for (size_t i = 0; i < results.times.size(); ++i) {
+  for (size_t i = 0; i < numIters; ++i) {
     printf("\t%lu", i);
   }
   printf("\n");
+}
 
+void print(const std::string &name, const size_t bytes, const Results &results) {
   // print times
   printf("%s\t%lu\t%s", name.c_str(), bytes, "s");
   for (auto t : results.times) {
-    printf("\t%f", t);
+    printf("\t%.1e", t / 1000.0);
   }
   printf("\n");
 
   // print metrics
   printf("%s\t%lu\t%s", name.c_str(), bytes, results.unit.c_str());
   for (auto m : results.metrics) {
-    printf("\t%f", m);
+    printf("\t%.1e", m);
   }
   printf("\n");
 }
@@ -233,14 +298,22 @@ void print(const std::string &name, const size_t bytes, const Results &results) 
 int main(void) {
 
   size_t bytes = 2ul * 1024ul * 1024ul * 1024ul;
+  size_t numIters = 3;
 
-  Results results = triad<int>(bytes, 1, 3);
+  print_header(numIters);
+
+  Results results;
+
+  results = triad<int>(bytes, 1, numIters);
   print("triad", bytes, results);
 
-  results = triad_system<int>(bytes, 1, 3);
+  results = triad<int>(bytes, 1, numIters);
+  print("triad_footprint", bytes, results);
+
+  results = triad_system<int>(bytes, 1, numIters);
   print("triad_system", bytes, results);
 
-  results = triad_footprint_system<int>(bytes, 1, 3);
+  results = triad_footprint_system<int>(bytes, 1, numIters);
   print("triad_footprint_system", bytes, results);
 
 }
