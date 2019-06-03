@@ -1,6 +1,8 @@
 #include <cstdio>
 #include <memory>
 
+#include <cxxopts.hpp>
+
 #include "check_cuda.cuh"
 #include "results.hpp"
 #include "cuda_malloc_managed.cuh"
@@ -32,10 +34,31 @@ void print(const std::string &name, const size_t bytes, const Results &results) 
   printf("\n");
 }
 
-int main(void) {
+int main(int argc, char **argv) {
 
-  size_t bytes = 2ul * 1024ul * 1024ul * 1024ul;
-  size_t numIters = 3;
+  cxxopts::Options options("triad", "triad benchmarks");
+
+  options.add_options()
+  ("n,num-iters",
+   "Number of iterations",
+    cxxopts::value<size_t>()->default_value("3"))
+  ("b,bytes",
+   "Number of bytes",
+    cxxopts::value<size_t>()->default_value("2147483648")) // 2G
+  ("h,help",
+   "Show help")
+  ;
+  auto result = options.parse(argc, argv);
+
+  bool help = result["help"].as<bool>();
+
+  if (help) {
+    printf("%s\n", options.help().c_str());
+    exit(0);
+  }
+
+  size_t numIters = result["num-iters"].as<size_t>();
+  size_t bytes = result["bytes"].as<size_t>();
 
   print_header(numIters);
 

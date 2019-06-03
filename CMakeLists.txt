@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.13)
 
+include("cmake/HunterGate.cmake")
+HunterGate(
+    URL "https://github.com/ruslo/hunter/archive/v0.23.186.tar.gz"
+    SHA1 "b215dc4d88cbe6cc74b5cc9fa9cdd7058775c26b"
+)
+
 project(um LANGUAGES CUDA)
+
+
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_MAKEFILE ON)
@@ -22,9 +30,13 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 
+hunter_add_package(cxxopts)
+find_package(cxxopts CONFIG REQUIRED)
+
 add_executable(triad triad.cu)
  set_target_properties(triad PROPERTIES
    CUDA_STANDARD 11
    CUDA_STANDARD_REQUIRED ON
    CUDA_EXTENSIONS OFF
  )
+target_link_libraries(triad PUBLIC cxxopts::cxxopts)
