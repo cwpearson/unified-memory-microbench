@@ -50,8 +50,8 @@ Results triad(size_t bytes, const T scalar, const size_t numIters) {
     CUDA_RUNTIME(cudaEventElapsedTime(&elapsed, start, stop));
 
     // add time and metric
-    results.times.push_back(elapsed);
-    results.metrics.push_back(3ul*bytes / elapsed);
+    results.times.push_back(elapsed / 1000.0);
+    results.metrics.push_back(3ul*bytes / (elapsed / 1000.0));
   }
 
   CUDA_RUNTIME(cudaStreamDestroy(stream));
@@ -114,8 +114,8 @@ Results triad_system(size_t bytes, const T scalar, const size_t numIters) {
     CUDA_RUNTIME(cudaEventElapsedTime(&elapsed, start, stop));
 
     // add time and metric
-    results.times.push_back(elapsed);
-    results.metrics.push_back(3ul*bytes / elapsed);
+    results.times.push_back(elapsed / 1000.0);
+    results.metrics.push_back(3ul*bytes / (elapsed / 1000.0));
   }
 
   CUDA_RUNTIME(cudaStreamDestroy(stream));
@@ -178,8 +178,8 @@ Results triad_footprint(size_t bytes, const T scalar, const size_t numIters) {
     CUDA_RUNTIME(cudaEventElapsedTime(&elapsed, start, stop));
 
     // add time and metric
-    results.times.push_back(elapsed);
-    results.metrics.push_back(3ul*bytes / elapsed);
+    results.times.push_back(elapsed / 1000.0);
+    results.metrics.push_back(3ul*bytes / (elapsed / 1000.0));
   }
 
   CUDA_RUNTIME(cudaStreamDestroy(stream));
@@ -254,8 +254,8 @@ Results triad_footprint_system(size_t bytes, const T scalar, const size_t numIte
     CUDA_RUNTIME(cudaEventElapsedTime(&elapsed, start, stop));
 
     // add time and metric
-    results.times.push_back(elapsed);
-    results.metrics.push_back(3ul*bytes / elapsed);
+    results.times.push_back(elapsed / 1000.0);
+    results.metrics.push_back(3ul*bytes / (elapsed / 1000.0));
   }
 
   CUDA_RUNTIME(cudaStreamDestroy(stream));
@@ -283,7 +283,7 @@ void print(const std::string &name, const size_t bytes, const Results &results) 
   // print times
   printf("%s\t%lu\t%s", name.c_str(), bytes, "s");
   for (auto t : results.times) {
-    printf("\t%.1e", t / 1000.0);
+    printf("\t%.1e", t);
   }
   printf("\n");
 
