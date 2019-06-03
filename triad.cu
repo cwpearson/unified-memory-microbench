@@ -238,7 +238,7 @@ Results triad_footprint_system(size_t bytes, const T scalar, const size_t numIte
     // scale each kernel so that it only touches footprint memory
     const size_t footprint = 4ul * 1024ul * 1024ul * 1024ul;
 
-    for (size_t startIdx = 0; startIdx < (footprint + sizeof(T) - 1) / sizeof(T); startIdx += footprint) {
+    for (size_t startIdx = 0; startIdx < (n + footprint - 1) / footprint; startIdx += footprint) {
       size_t stopIdx = min(startIdx + footprint, n);
       size_t kernelN = stopIdx - startIdx;
       T *aBegin = &a[startIdx];
