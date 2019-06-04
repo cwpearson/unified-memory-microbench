@@ -83,6 +83,8 @@ int main(int argc, char **argv) {
   const size_t numIters = result["num-iters"].as<size_t>();
   const std::string seperator = result["seperator"].as<std::string>();
 
+
+
   print_header(numIters, seperator);
 
   for (const size_t runBytes : runSizes) {

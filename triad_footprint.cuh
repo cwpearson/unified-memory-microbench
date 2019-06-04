@@ -5,8 +5,8 @@
 #include "cuda_malloc_managed.cuh"
 
 template <typename T>
-__global__ void triad_footprint_kernel(T *a, const T *b, const T *c, const T scalar,
-                             const size_t n) {
+__global__ void triad_footprint_kernel(T *a, const T *b, const T *c,
+                                       const T scalar, const size_t n) {
   for (size_t i = blockDim.x * blockIdx.x + threadIdx.x; i < n;
        i += gridDim.x * blockDim.x) {
     a[i] = b[i] + scalar * c[i];
@@ -14,7 +14,19 @@ __global__ void triad_footprint_kernel(T *a, const T *b, const T *c, const T sca
 }
 
 template <typename T, typename Alloc = CUDAMallocManaged<T>>
-Results triad_footprint(size_t bytes, const T scalar, const size_t numIters, Alloc alloc = Alloc()) {
+Results triad_footprint(size_t bytes, const T scalar, const size_t numIters,
+                        Alloc alloc = Alloc()) {
+
+  const size_t dimBlock = 512;
+  int maxActiveBlocks;
+  CUDA_RUNTIME(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+      &maxActiveBlocks, triad_kernel<T>, dimBlock, 0));
+  int device;
+  cudaDeviceProp props;
+  CUDA_RUNTIME(cudaGetDevice(&device));
+  CUDA_RUNTIME(cudaGetDeviceProperties(&props, device));
+  const size_t dimGrid = maxActiveBlocks * props.multiProcessorCount;
+  fprintf(stderr, "kernel dims: <<<%lu, %lu>>>\n", dimGrid, dimBlock);
 
   Results results;
   results.unit = "b/s";
@@ -41,7 +53,8 @@ Results triad_footprint(size_t bytes, const T scalar, const size_t numIters, All
   for (size_t iter = 0; iter < numIters; ++iter) {
     // scale each kernel so that it only touches footprint memory
     const size_t footprintBytes = 4ul * 1024ul * 1024ul * 1024ul;
-    const size_t footprintElems = footprintBytes / 3 /* number of arrays */ / sizeof(T);
+    const size_t footprintElems =
+        footprintBytes / 3 /* number of arrays */ / sizeof(T);
 
     CUDA_RUNTIME(cudaEventRecord(start, stream));
     for (size_t startIdx = 0; startIdx < n; startIdx += footprintElems) {
@@ -50,9 +63,10 @@ Results triad_footprint(size_t bytes, const T scalar, const size_t numIters, All
       T *aBegin = &a[startIdx];
       T *bBegin = &b[startIdx];
       T *cBegin = &c[startIdx];
-      triad_footprint_kernel<<<150, 512, 0, stream>>>(aBegin, bBegin, cBegin, scalar, kernelN);
+      triad_footprint_kernel<<<dimGrid, dimBlock, 0, stream>>>(
+          aBegin, bBegin, cBegin, scalar, kernelN);
     }
-    
+
     CUDA_RUNTIME(cudaEventRecord(stop, stream));
 
     CUDA_RUNTIME(cudaStreamSynchronize(stream));
@@ -61,7 +75,7 @@ Results triad_footprint(size_t bytes, const T scalar, const size_t numIters, All
 
     // add time and metric
     results.times.push_back(elapsed / 1000.0);
-    results.metrics.push_back(3ul*bytes / (elapsed / 1000.0));
+    results.metrics.push_back(3ul * bytes / (elapsed / 1000.0));
   }
 
   CUDA_RUNTIME(cudaStreamDestroy(stream));
