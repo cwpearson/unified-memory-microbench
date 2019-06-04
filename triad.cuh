@@ -19,6 +19,9 @@ Results triad(size_t bytes, const T scalar, const size_t numIters, Alloc alloc =
   Results results;
   results.unit = "b/s";
 
+  // we do 3 arrays, so each one should be bytes/3 for a total footprint of bytes
+  bytes /= 3;
+
   // number of elements and actual allocation size
   const size_t n = bytes / sizeof(T);
   bytes = bytes / sizeof(T) * sizeof(T);
@@ -43,10 +46,11 @@ Results triad(size_t bytes, const T scalar, const size_t numIters, Alloc alloc =
     CUDA_RUNTIME(cudaStreamSynchronize(stream));
     float elapsed;
     CUDA_RUNTIME(cudaEventElapsedTime(&elapsed, start, stop));
+    elapsed /= 1000.0; // convert to seconds
 
     // add time and metric
-    results.times.push_back(elapsed / 1000.0);
-    results.metrics.push_back(3ul*bytes / (elapsed / 1000.0));
+    results.times.push_back(elapsed);
+    results.metrics.push_back(3ul*bytes / elapsed);
   }
 
   CUDA_RUNTIME(cudaStreamDestroy(stream));
