@@ -53,4 +53,11 @@ add_executable(triad triad.cu)
    CUDA_STANDARD_REQUIRED ON
    CUDA_EXTENSIONS OFF
  )
-target_link_libraries(triad PUBLIC cxxopts::cxxopts c++)
+target_link_libraries(triad PUBLIC cxxopts::cxxopts)
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  target_link_libraries(triad PUBLIC c++)
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+endif()
