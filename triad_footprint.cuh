@@ -63,6 +63,7 @@ Results triad_footprint(size_t bytes, const T scalar, const size_t numIters,
       T *aBegin = &a[startIdx];
       T *bBegin = &b[startIdx];
       T *cBegin = &c[startIdx];
+      fprintf(stderr, "iter %lu: launching: idx [%lu %lu) %lu B each\n", iter, startIdx, stopIdx, kernelN * sizeof(T));
       triad_footprint_kernel<<<dimGrid, dimBlock, 0, stream>>>(
           aBegin, bBegin, cBegin, scalar, kernelN);
     }
@@ -72,10 +73,11 @@ Results triad_footprint(size_t bytes, const T scalar, const size_t numIters,
     CUDA_RUNTIME(cudaStreamSynchronize(stream));
     float elapsed;
     CUDA_RUNTIME(cudaEventElapsedTime(&elapsed, start, stop));
+    elapsed /= 1000;
 
     // add time and metric
-    results.times.push_back(elapsed / 1000.0);
-    results.metrics.push_back(3ul * bytes / (elapsed / 1000.0));
+    results.times.push_back(elapsed);
+    results.metrics.push_back(3ul * bytes / elapsed);
   }
 
   CUDA_RUNTIME(cudaStreamDestroy(stream));
