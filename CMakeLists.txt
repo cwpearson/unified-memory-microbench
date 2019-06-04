@@ -6,7 +6,7 @@ HunterGate(
     SHA1 "b215dc4d88cbe6cc74b5cc9fa9cdd7058775c26b"
 )
 
-project(um LANGUAGES CUDA)
+project(um LANGUAGES CXX CUDA)
 
 
 
@@ -33,10 +33,24 @@ endif()
 hunter_add_package(cxxopts)
 find_package(cxxopts CONFIG REQUIRED)
 
+message(STATUS "${CMAKE_CXX_COMPILER_ID}")
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  set(CMAKE_CXX_FLAGS "-stdlib=libc++")
+  set(CMAKE_CUDA_FLAGS "-Xcompiler=-stdlib=libc++")
+  message(STATUS "added some clang flags")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  # using GCC
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+  # using Intel C++
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  # using Visual Studio C++
+endif()
+
 add_executable(triad triad.cu)
  set_target_properties(triad PROPERTIES
    CUDA_STANDARD 11
    CUDA_STANDARD_REQUIRED ON
    CUDA_EXTENSIONS OFF
  )
-target_link_libraries(triad PUBLIC cxxopts::cxxopts)
+target_link_libraries(triad PUBLIC cxxopts::cxxopts c++)
