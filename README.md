@@ -1,5 +1,9 @@
 # unified-memory-microbench
 
+### For help
+
+`./triad -h`
+
 ### To skip the system allocator (on systems without ATS)
 
 `./triad --no-system`
