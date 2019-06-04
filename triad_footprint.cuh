@@ -19,6 +19,9 @@ Results triad_footprint(size_t bytes, const T scalar, const size_t numIters, All
   Results results;
   results.unit = "b/s";
 
+  // 3 arrays
+  bytes /= 3;
+
   // number of elements and actual allocation size
   const size_t n = bytes / sizeof(T);
   bytes = bytes / sizeof(T) * sizeof(T);
