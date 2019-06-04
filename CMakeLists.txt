@@ -53,6 +53,9 @@ set(CMAKE_CUDA_EXTENSIONS OFF)
 add_executable(triad triad.cu)
 target_link_libraries(triad PUBLIC cxxopts::cxxopts)
 
+add_executable(triad-footprint triad_footprint.cu)
+target_link_libraries(triad-footprint PUBLIC cxxopts::cxxopts)
+
 add_executable(triad-footprint-system triad_footprint_system.cu)
 target_link_libraries(triad-footprint-system PUBLIC cxxopts::cxxopts)
 
@@ -61,6 +64,7 @@ target_link_libraries(triad-system PUBLIC cxxopts::cxxopts)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   target_link_libraries(triad PUBLIC c++)
+  target_link_libraries(triad-footprint PUBLIC c++)
   target_link_libraries(triad-footprint-system PUBLIC c++)
   target_link_libraries(triad-system PUBLIC c++)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")

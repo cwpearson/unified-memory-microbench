@@ -4,8 +4,9 @@
 #include <cxxopts.hpp>
 
 #include "check_cuda.cuh"
+#include "cuda_malloc_managed.cuh"
 #include "results.hpp"
-#include "triad.cuh"
+#include "triad_footprint.cuh"
 
 void print_header(size_t numIters, const std::string &sep) {
   printf("benchmark%ssize%sunit", sep.c_str(), sep.c_str());
@@ -49,6 +50,7 @@ int main(int argc, char **argv) {
       ("s,seperator", "Seperator to use for table output",
        cxxopts::value<std::string>()->default_value(","))("h,help",
                                                           "Show help");
+
   auto result = options.parse(argc, argv);
 
   const bool help = result["help"].as<bool>();
@@ -75,8 +77,8 @@ int main(int argc, char **argv) {
   print_header(numIters, seperator);
 
   for (const size_t runBytes : runSizes) {
-
-    Results results = triad<int, std::allocator<int>>(runBytes, 1, numIters);
-    print("triad/system", runBytes, results, seperator);
+    Results results =
+        triad_footprint<int, CUDAMallocManaged<int>>(runBytes, 1, numIters);
+    print("triad_footprint/cudamallocmanaged", runBytes, results, seperator);
   }
 }
