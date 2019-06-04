@@ -20,7 +20,7 @@ Results triad_footprint(size_t bytes, const T scalar, const size_t numIters,
   const size_t dimBlock = 512;
   int maxActiveBlocks;
   CUDA_RUNTIME(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &maxActiveBlocks, triad_kernel<T>, dimBlock, 0));
+      &maxActiveBlocks, triad_footprint_kernel<T>, dimBlock, 0));
   int device;
   cudaDeviceProp props;
   CUDA_RUNTIME(cudaGetDevice(&device));

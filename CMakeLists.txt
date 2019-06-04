@@ -33,30 +33,36 @@ endif()
 hunter_add_package(cxxopts)
 find_package(cxxopts CONFIG REQUIRED)
 
-message(STATUS "${CMAKE_CXX_COMPILER_ID}")
-
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CMAKE_CXX_FLAGS "-stdlib=libc++")
   set(CMAKE_CUDA_FLAGS "-Xcompiler=-stdlib=libc++")
   message(STATUS "added some clang flags")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-  # using GCC
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-  # using Intel C++
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-  # using Visual Studio C++
 endif()
 
+# set C++ and CUDA standards for all targets
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CUDA_STANDARD 11)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_EXTENSIONS OFF)
+
 add_executable(triad triad.cu)
- set_target_properties(triad PROPERTIES
-   CUDA_STANDARD 11
-   CUDA_STANDARD_REQUIRED ON
-   CUDA_EXTENSIONS OFF
- )
 target_link_libraries(triad PUBLIC cxxopts::cxxopts)
+
+add_executable(triad-footprint-system triad_footprint_system.cu)
+target_link_libraries(triad-footprint-system PUBLIC cxxopts::cxxopts)
+
+add_executable(triad-system triad_system.cu)
+target_link_libraries(triad-system PUBLIC cxxopts::cxxopts)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   target_link_libraries(triad PUBLIC c++)
+  target_link_libraries(triad-footprint-system PUBLIC c++)
+  target_link_libraries(triad-system PUBLIC c++)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")

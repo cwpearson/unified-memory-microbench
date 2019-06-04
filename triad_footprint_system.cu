@@ -4,9 +4,7 @@
 #include <cxxopts.hpp>
 
 #include "check_cuda.cuh"
-#include "cuda_malloc_managed.cuh"
 #include "results.hpp"
-#include "triad.cuh"
 #include "triad_footprint.cuh"
 
 void print_header(size_t numIters, const std::string &sep) {
@@ -43,15 +41,14 @@ int main(int argc, char **argv) {
   std::vector<double> ms;
 
   options.add_options()("n,num-iters", "Number of iterations",
-                        cxxopts::value<size_t>()->default_value("3"))
-      ("m,megabytes", "Number of megabytes",
-       cxxopts::value(ms)->default_value("2048.0")) // 2G
+                        cxxopts::value<size_t>()->default_value("3"))(
+      "m,megabytes", "Number of megabytes",
+      cxxopts::value(ms)->default_value("2048.0")) // 2G
       ("g,gigabytes", "Number of gigabytes",
        cxxopts::value(gs)->default_value("2.0")) // 2G
       ("s,seperator", "Seperator to use for table output",
-       cxxopts::value<std::string>()->default_value(","))
-      ("h,help", "Show help");
-      
+       cxxopts::value<std::string>()->default_value(","))("h,help",
+                                                          "Show help");
   auto result = options.parse(argc, argv);
 
   const bool help = result["help"].as<bool>();
@@ -75,19 +72,11 @@ int main(int argc, char **argv) {
   const size_t numIters = result["num-iters"].as<size_t>();
   const std::string seperator = result["seperator"].as<std::string>();
 
-
-
   print_header(numIters, seperator);
 
   for (const size_t runBytes : runSizes) {
-    Results results;
-
-    results = triad<int, CUDAMallocManaged<int>>(runBytes, 1, numIters);
-    print("triad/cudamallocmanaged", runBytes, results, seperator);
-
-    results =
-        triad_footprint<int, CUDAMallocManaged<int>>(runBytes, 1, numIters);
-    print("triad_footprint/cudamallocmanaged", runBytes, results, seperator);
-
+    Results results =
+        triad_footprint<int, std::allocator<int>>(runBytes, 1, numIters);
+    print("triad_footprint/system", runBytes, results, seperator);
   }
 }
