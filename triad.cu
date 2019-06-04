@@ -10,15 +10,15 @@
 #include "triad.cuh"
 
 
-void print_header(size_t numIters) {
-  printf("benchmark\tsize\tunit");
+void print_header(size_t numIters, const std::string &sep) {
+  printf("benchmark%ssize%sunit", sep.c_str(), sep.c_str());
   for (size_t i = 0; i < numIters; ++i) {
-    printf("\t%lu", i);
+    printf("%s%lu", sep.c_str(), i);
   }
   printf("\n");
 }
 
-void print(const std::string &name, const size_t bytes, const Results &results) {
+void print(const std::string &name, const size_t bytes, const Results &results, const std::string &sep) {
   // print times
   //printf("%s\t%lu\t%s", name.c_str(), bytes, "s");
   //for (auto t : results.times) {
@@ -27,9 +27,9 @@ void print(const std::string &name, const size_t bytes, const Results &results) 
   //printf("\n");
 
   // print metrics
-  printf("%s\t%lu\t%s", name.c_str(), bytes, results.unit.c_str());
+  printf("%s%s%lu%s%s", name.c_str(), sep.c_str(), bytes, sep.c_str(), results.unit.c_str());
   for (auto m : results.metrics) {
-    printf("\t%.1e", m);
+    printf("%s%.1e", sep.c_str(), m);
   }
   printf("\n");
 }
@@ -51,6 +51,9 @@ int main(int argc, char **argv) {
   ("g,gigabytes",
    "Number of gigabytes",
     cxxopts::value<double>()->default_value("2.0")) // 2G
+  ("s,seperator",
+    "Seperator to use for output",
+     cxxopts::value<std::string>()->default_value(","))
   ("h,help",
    "Show help")
   ;
@@ -74,21 +77,22 @@ int main(int argc, char **argv) {
   }
 
   size_t numIters = result["num-iters"].as<size_t>();
+  std::string seperator = result["seperator"].as<std::string>();
 
-  print_header(numIters);
+  print_header(numIters, seperator);
 
   Results results;
 
   results = triad<int, CUDAMallocManaged<int>>(bytes, 1, numIters);
-  print("triad/cudamallocmanaged", bytes, results);
+  print("triad/cudamallocmanaged", bytes, results, seperator);
 
   results = triad_footprint<int, CUDAMallocManaged<int>>(bytes, 1, numIters);
-  print("triad_footprint/cudamallocmanaged", bytes, results);
+  print("triad_footprint/cudamallocmanaged", bytes, results, seperator);
 
   results = triad<int, std::allocator<int>>(bytes, 1, numIters);
-  print("triad/system", bytes, results);
+  print("triad/system", bytes, results, seperator);
 
   results = triad_footprint<int, std::allocator<int>>(bytes, 1, numIters);
-  print("triad_footprint/system", bytes, results);
+  print("triad_footprint/system", bytes, results, seperator);
 
 }
