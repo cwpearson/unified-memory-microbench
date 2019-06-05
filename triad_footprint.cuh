@@ -2,6 +2,7 @@
 
 #include <functional>
 
+#include "alignment.hpp"
 #include "cuda_malloc_managed.cuh"
 
 template <typename T>
@@ -35,12 +36,17 @@ Results triad_footprint(size_t bytes, const T scalar, const size_t numIters,
   bytes /= 3;
 
   // number of elements and actual allocation size
-  const size_t n = bytes / sizeof(T);
   bytes = bytes / sizeof(T) * sizeof(T);
+  const size_t n = bytes / sizeof(T);
 
-  T *a = alloc.allocate(n);
-  T *b = alloc.allocate(n);
-  T *c = alloc.allocate(n);
+  size_t alignment = 256;
+
+  T *a = alloc.allocate(n + alignment);
+  T *b = alloc.allocate(n + alignment);
+  T *c = alloc.allocate(n + alignment);
+  T *alignedA = align(a, alignment);
+  T *alignedB = align(b, alignment);
+  T *alignedC = align(c, alignment);
 
   cudaEvent_t start = nullptr;
   cudaEvent_t stop = nullptr;
@@ -52,7 +58,7 @@ Results triad_footprint(size_t bytes, const T scalar, const size_t numIters,
 
   for (size_t iter = 0; iter < numIters; ++iter) {
     // scale each kernel so that it only touches footprint memory
-    const size_t footprintBytes = 4ul * 1024ul * 1024ul * 1024ul;
+    const size_t footprintBytes = 3ul * 1024ul * 1024ul * 1024ul;
     const size_t footprintElems =
         footprintBytes / 3 /* number of arrays */ / sizeof(T);
 
@@ -60,10 +66,11 @@ Results triad_footprint(size_t bytes, const T scalar, const size_t numIters,
     for (size_t startIdx = 0; startIdx < n; startIdx += footprintElems) {
       size_t stopIdx = min(startIdx + footprintElems, n);
       size_t kernelN = stopIdx - startIdx;
-      T *aBegin = &a[startIdx];
-      T *bBegin = &b[startIdx];
-      T *cBegin = &c[startIdx];
+      T *aBegin = &alignedA[startIdx];
+      T *bBegin = &alignedB[startIdx];
+      T *cBegin = &alignedC[startIdx];
       fprintf(stderr, "iter %lu: launching: idx [%lu %lu) %lu B each\n", iter, startIdx, stopIdx, kernelN * sizeof(T));
+      fprintf(stderr, "align of a %lu b %lu c %lu\n", alignment_of(aBegin), alignment_of(bBegin), alignment_of(cBegin));
       triad_footprint_kernel<<<dimGrid, dimBlock, 0, stream>>>(
           aBegin, bBegin, cBegin, scalar, kernelN);
     }
@@ -84,9 +91,9 @@ Results triad_footprint(size_t bytes, const T scalar, const size_t numIters,
   CUDA_RUNTIME(cudaEventDestroy(start));
   CUDA_RUNTIME(cudaEventDestroy(stop));
 
-  alloc.deallocate(a, n);
-  alloc.deallocate(b, n);
-  alloc.deallocate(c, n);
+  alloc.deallocate(a, n + alignment);
+  alloc.deallocate(b, n + alignment);
+  alloc.deallocate(c, n + alignment);
   a = nullptr;
   b = nullptr;
   c = nullptr;
