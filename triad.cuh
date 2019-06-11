@@ -2,6 +2,7 @@
 
 #include <functional>
 
+#include "alignment.hpp"
 #include "cuda_malloc_managed.cuh"
 
 template <typename T>
@@ -36,12 +37,21 @@ Results triad(size_t bytes, const T scalar, const size_t numIters,
   bytes /= 3;
 
   // number of elements and actual allocation size
-  const size_t n = bytes / sizeof(T);
   bytes = bytes / sizeof(T) * sizeof(T);
+  const size_t n = bytes / sizeof(T);
 
-  T *a = alloc.allocate(n);
-  T *b = alloc.allocate(n);
-  T *c = alloc.allocate(n);
+  // ensure arrays are aligned to this address
+  size_t alignment = 256;
+
+  T *a = alloc.allocate(n + alignment);
+  T *b = alloc.allocate(n + alignment);
+  T *c = alloc.allocate(n + alignment);
+
+  T *alignedA = align(a, alignment);
+  T *alignedB = align(b, alignment);
+  T *alignedC = align(c, alignment);
+
+  printf("alignment a %lu b %lu c %lu\n", alignment_of(alignedA), alignment_of(alignedB), alignment_of(alignedC));
 
   cudaEvent_t start = nullptr;
   cudaEvent_t stop = nullptr;
@@ -52,8 +62,9 @@ Results triad(size_t bytes, const T scalar, const size_t numIters,
   CUDA_RUNTIME(cudaEventCreate(&stop));
 
   for (size_t iter = 0; iter < numIters; ++iter) {
+    fprintf(stderr, "launching [%lu %lu)\n", 0ul, n);
     CUDA_RUNTIME(cudaEventRecord(start, stream));
-    triad_kernel<<<dimGrid, dimBlock, 0, stream>>>(a, b, c, scalar, n);
+    triad_kernel<<<dimGrid, dimBlock, 0, stream>>>(alignedA, alignedB, alignedC, scalar, n);
     CUDA_RUNTIME(cudaEventRecord(stop, stream));
 
     CUDA_RUNTIME(cudaStreamSynchronize(stream));
@@ -70,9 +81,9 @@ Results triad(size_t bytes, const T scalar, const size_t numIters,
   CUDA_RUNTIME(cudaEventDestroy(start));
   CUDA_RUNTIME(cudaEventDestroy(stop));
 
-  alloc.deallocate(a, n);
-  alloc.deallocate(b, n);
-  alloc.deallocate(c, n);
+  alloc.deallocate(a, n + alignment);
+  alloc.deallocate(b, n + alignment);
+  alloc.deallocate(c, n + alignment);
   a = nullptr;
   b = nullptr;
   c = nullptr;
