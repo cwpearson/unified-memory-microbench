@@ -50,6 +50,9 @@ set(CMAKE_CUDA_STANDARD 11)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_EXTENSIONS OFF)
 
+add_executable(naive naive.cu)
+target_link_libraries(naive PUBLIC cxxopts::cxxopts)
+
 add_executable(triad triad.cu)
 target_link_libraries(triad PUBLIC cxxopts::cxxopts)
 
